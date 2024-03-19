@@ -25,7 +25,7 @@ class SpotifyPlayer extends Player {
 	async playTrackNew(playable: PlayOptions, dispatcher: FormulaDispatcher) {
 		console.log(playable);
 		// Check if the source is YouTube
-		if (playable?.songData?.source === 'youtube' || playable.songData.info.sourceName == 'youtube') {
+		if (playable?.songData?.source === 'youtube' || playable?.songData?.info?.sourceName == 'youtube') {
 			let data;
 			const meta = playable.songData.metadata ?? playable.songData.info;
 

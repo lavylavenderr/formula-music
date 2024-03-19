@@ -27,6 +27,8 @@ export class FormulaDispatcher {
 		this.stopped = false;
 
 		let _notifiedOnce = false;
+		// @ts-expect-error
+		let m;
 
 		this.player
 			.on('start', async () => {
@@ -38,7 +40,7 @@ export class FormulaDispatcher {
 				}
 
 				if (this.current.source === 'spotify') {
-					await this.channel.send({
+					m = await this.channel.send({
 						embeds: [
 							constructEmbed({
 								description: `<:spotify:1219522954174529578>  Now playing: [**${this.current.metadata.title} by ${this.current.metadata.author}**](https://open.spotify.com/track/${this.current.metadata.identifier})`
@@ -55,7 +57,9 @@ export class FormulaDispatcher {
 					});
 				}
 			})
-			.on('end', () => {
+			.on('end', async () => {
+				// @ts-expect-error
+				await m?.delete().catch(() => null)
 				if (this.repeat === 'one') this.queue.unshift(this.current);
 				if (this.repeat === 'all') this.queue.push(this.current);
 				this.play();

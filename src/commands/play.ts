@@ -16,7 +16,7 @@ export class PlayCommand extends Command {
 		const shoukaku = this.container.shoukaku;
 		const node = shoukaku.options.nodeResolver(shoukaku.nodes);
 
-		const result = await node?.rest.resolve('https://soundcloud.com/impactist/glazer-cartoon-network?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing');
+		const result = await node?.rest.resolve('https://open.spotify.com/track/3LlwXHVbqLanW9KLJqudW8?si=345baf73634744c4');
 		console.log(result);
 		// @ts-expect-error
 		const metadata = result!.track ?? result?.data;
