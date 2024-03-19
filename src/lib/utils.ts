@@ -6,7 +6,21 @@ import {
 	type MessageCommandSuccessPayload
 } from '@sapphire/framework';
 import { cyan } from 'colorette';
-import type { APIUser, Guild, User } from 'discord.js';
+import type { APIUser, ColorResolvable, Guild, User } from 'discord.js';
+
+export function getRandomHexColor(): ColorResolvable {
+    const red = Math.floor(Math.random() * 256);
+    const green = Math.floor(Math.random() * 256);
+    const blue = Math.floor(Math.random() * 256);
+
+    const hexRed = red.toString(16).padStart(2, '0');
+    const hexGreen = green.toString(16).padStart(2, '0');
+    const hexBlue = blue.toString(16).padStart(2, '0');
+
+    const hexColor = "#" + hexRed + hexGreen + hexBlue as ColorResolvable;
+
+    return hexColor;
+}
 
 export function logSuccessCommand(payload: ContextMenuCommandSuccessPayload | ChatInputCommandSuccessPayload | MessageCommandSuccessPayload): void {
 	let successLoggerData: ReturnType<typeof getSuccessLoggerData>;

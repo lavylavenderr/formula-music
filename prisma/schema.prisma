@@ -30,6 +30,7 @@ model Playlist {
 model Song {
   id        Int        @id @unique @default(autoincrement())
   title     String
+  isrc      String
   spotifyId String
   playlists Playlist[]
   artists   Artist[]
