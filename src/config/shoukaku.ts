@@ -1,9 +1,8 @@
 import spotifyWebApi from 'spotify-web-api-node';
 import { LoadType, Player, PlayOptions, Rest, Track } from 'shoukaku';
-import { parse, formatOpenURL } from 'spotify-uri';
+// import { parse, formatOpenURL } from 'spotify-uri';
 import { FormulaDispatcher } from '../lib/dispatcher';
 import { constructEmbed } from '../lib/embedbuilder';
-import { DataManager } from 'discord.js';
 
 const REGEX = /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?(track|playlist|album|artist)[\/:]([A-Za-z0-9]+)/;
 
@@ -23,14 +22,13 @@ async function refreshSpotifyToken() {
 
 class SpotifyPlayer extends Player {
 	async playTrackNew(playable: PlayOptions, dispatcher: FormulaDispatcher) {
-		console.log(playable);
 		// Check if the source is YouTube
-		if (playable?.songData?.source === 'youtube' || playable?.songData?.info?.sourceName == 'youtube') {
+		if (playable.metadata.sourceName === 'youtube') {
 			let data;
-			const meta = playable.songData.metadata ?? playable.songData.info;
+			const meta = playable.metadata;
 
-			if (playable.songData.encoded) {
-				playable.track = playable.songData.encoded;
+			if (playable.track) {
+				playable.track = playable.track;
 				return super.playTrack(playable);
 			}
 
@@ -44,8 +42,27 @@ class SpotifyPlayer extends Player {
 			playable.track = data.encoded;
 		}
 
+		if (playable.metadata.sourceName === 'soundcloud') {
+			let data;
+			const meta = playable.metadata;
+			const res = await dispatcher.player.node.rest.resolve(meta.uri!);
+
+			if (res?.loadType === 'empty') {
+				return dispatcher.channel.send({
+					embeds: [
+						constructEmbed({
+							description: 'We were unable to locate a track with that provided query.'
+						})
+					]
+				});
+			}
+
+			data = res!.data as Track;
+			playable.track = data.encoded;
+		}
+
 		// If the source is Spotify
-		if (playable.songData.source === 'spotify') {
+		if (playable.metadata.sourceName === 'spotify') {
 			let m;
 			let data;
 			let res;
@@ -61,31 +78,19 @@ class SpotifyPlayer extends Player {
 				.catch(() => null);
 
 			try {
-				res = await dispatcher.player.node.rest.resolve(
-					`http://5.78.115.239:8001/track/${encodeURIComponent(playable.songData.metadata.isrc)}`
-				);
+				res = await dispatcher.player.node.rest.resolve(`http://5.78.115.239:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
 			} catch {}
 
 			if (res?.loadType === 'error') {
-				m
-					?.edit({
-						embeds: [
-							constructEmbed({ description: "<:spotify:1219522954174529578> Oops! Something went wrong... let's try that again!" })
-						]
-					})
-					.catch(() => null);
+				// Give the SongDB 4 seconds to get it's shit together, 4 seems to be the sweet spot to prevent random skipping due to being sent an imcomplete track?
+				await new Promise((resolve) => setTimeout(resolve, 4000));
 
-				// Give the SongDB 5 seconds to get it's shit together
-				await new Promise((resolve) => setTimeout(resolve, 5000));
-
-				res = await dispatcher.player.node.rest.resolve(
-					`http://5.78.115.239:8001/track/${encodeURIComponent(playable.songData.metadata.isrc)}`
-				);
+				res = await dispatcher.player.node.rest.resolve(`http://5.78.115.239:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
 
 				if (!res?.data) {
 					if (m) await m.edit('searching SoundCloud instead..').catch(() => null);
 					const soundCloudRes = await dispatcher.player.node.rest.resolve(
-						`scsearch: ${playable.songData.author} - ${playable.songData.title}`
+						`scsearch: ${playable.metadata.author} - ${playable.metadata.title}`
 					);
 
 					if (!soundCloudRes || soundCloudRes.loadType === 'error') {
@@ -104,18 +109,27 @@ class SpotifyPlayer extends Player {
 				}
 			}
 
+			// Assign misc data to the object so it's accessible outside of this function.
 			data = res!.data as Track;
+			playable.metadata = data.info;
 			playable.track = data.encoded;
 			if (m) m.delete().catch(() => null);
 		}
 
-		if (!playable.track) playable.track = playable.songData.encoded
+		// Http source
+		if (playable.metadata.sourceName === 'http') {
+			const res = await dispatcher.player.node.rest.resolve(playable.metadata.uri!);
+			const data = res?.data as Track;
 
+			playable.metadata = data.info;
+			playable.track = data.encoded;
+		}
+
+		if (!playable.track) playable.track = playable.track;
 		return super.playTrack(playable);
 	}
 }
 
-// TODO: Convert tracks into custom format so it's global, not mix and match between Lavaplayer and my preferences ;)	
 class SpotifyRest extends Rest {
 	// @ts-expect-error
 	// TODO: I cba to try to find a proper solution at the moment, I'll come back to this.
@@ -126,120 +140,41 @@ class SpotifyRest extends Rest {
 			const [, type, id] = identifier.match(REGEX) ?? [];
 
 			switch (type) {
-				case 'album':
-					const albumData = await spotifyApi.getAlbum(id);
-					let albumNames = [];
-
-					while (albumNames.length < albumData.body.total_tracks) {
-						// @ts-expect-error
-						let albumTrackRes = await spotifyApi.getAlbumTracks(id, {
-							limit: 50,
-							offset: albumNames.length
-						});
-
-						albumNames.push(
-							...albumTrackRes.body.items.map((k: any) => {
-								return {
-									track: {
-										spotify: true
-									},
-									info: {
-										author: k.artists.map((k: any) => k.name).join(', '),
-										identifier: k.id,
-										isSeekable: false,
-										isStream: false,
-										length: k.duration_ms,
-										position: -1,
-										sourceName: 'Spotify',
-										title: k.name,
-										uri: formatOpenURL(parse(k.uri)),
-										tn: albumData.body.images[0].url,
-										isrc: k.external_ids?.isrc
-									}
-								};
-							})
-						);
-					}
-
-					return {
-						loadType: 'PLAYLIST_LOADED',
-						playlistInfo: { selectedTrack: -1, name: albumData.body.name },
-						tracks: albumNames
-					};
-				case 'artist':
-					const artistData = await spotifyApi.getArtist(id);
-
-					return {
-						loadType: 'PLAYLIST_LOADED',
-						playlistInfo: { selectedTrack: -1, name: artistData.body.name },
-						tracks: (await spotifyApi.getArtistTopTracks(id, 'US')).body.tracks.map((k) => {
-							return {
-								track: {
-									spotify: true
-								},
-								info: {
-									author: k.artists.map((k) => k.name).join(', '),
-									identifier: k.id,
-									isSeekable: false,
-									isStream: false,
-									length: k.duration_ms,
-									position: -1,
-									sourceName: 'Spotify',
-									title: k.name,
-									uri: formatOpenURL(parse(k.uri)),
-									tn: k.album.images[0].url,
-									isrc: k.external_ids?.isrc
-								}
-							};
-						})
-					};
 				case 'playlist':
 					const playlistData = await spotifyApi.getPlaylist(id);
-					let playlistNames = [];
+					const playlistTracks = await spotifyApi.getPlaylistTracks(id);
+					const trackArray = [];
 
-					let next = true;
+					if (playlistTracks.statusCode === 404)
+						return {
+							loadType: 'error',
+							message: 'This playlist does not exist.'
+						};
 
-					while (next) {
-						// @ts-expect-error
-						let playlistTrackRes = await spotifyApi.getPlaylistTracks(id, {
-							limit: 50,
-							offset: playlistNames.length
+					for (const result of playlistTracks.body.items) {
+						if (!result.track) return;
+
+						trackArray.push({
+							info: {
+								artworkUrl: result.track.album.images[0].url,
+								author: result.track.artists.map((k) => k.name).join(', '),
+								identifier: result.track.id,
+								isSeekable: false,
+								isStream: false,
+								isrc: result.track.external_ids.isrc,
+								length: result.track.duration_ms,
+								position: -1,
+								sourceName: 'spotify',
+								title: result.track.name,
+								uri: `https://open.spotify.com/track/${result.track.id}`
+							}
 						});
-
-						next = playlistTrackRes.body.next;
-
-						playlistNames.push(
-							// @ts-expect-error
-							...playlistTrackRes.body.items.map((k) => {
-								return k.track
-									? {
-											track: {
-												spotify: true
-											},
-											info: {
-												// @ts-expect-error
-												author: k.track.artists.map((k) => k.name).join(', '),
-												identifier: k.track.id,
-												isSeekable: false,
-												isStream: false,
-												length: k.track.duration_ms,
-												position: -1,
-												sourceName: 'Spotify',
-												title: k.track.name,
-												uri: formatOpenURL(parse(k.track.uri)),
-												tn: k.track.album.images[0].url,
-												isrc: k.track.external_ids?.isrc
-											}
-										}
-									: null;
-							})
-						);
 					}
 
 					return {
-						loadType: 'PLAYLIST_LOADED',
-						playlistInfo: { selectedTrack: -1, name: playlistData.body.name },
-						tracks: playlistNames.filter((n) => n)
+						loadType: 'playlist',
+						playlistInfo: { selectedTrack: -1, name: playlistData.body.name, coverImg: playlistData.body.images[0].url },
+						data: { tracks: trackArray }
 					};
 				case 'track':
 					const trackData = await spotifyApi.getTrack(id);
@@ -251,19 +186,21 @@ class SpotifyRest extends Rest {
 						};
 
 					return {
-						loadType: 'TRACK_LOADED',
+						loadType: 'track',
 						playlistInfo: {},
-						track: {
-							source: 'spotify',
-							metadata: {
-								title: trackData.body.name,
+						data: {
+							info: {
+								artworkUrl: trackData.body.album.images[0].url,
 								author: trackData.body.artists.map((k) => k.name).join(', '),
 								identifier: trackData.body.id,
+								isSeekable: false,
+								isStream: false,
 								isrc: trackData.body.external_ids.isrc,
-								isSeekable: true,
-								isStream: true,
-								albumArt: trackData.body.album.images[0].url,
-								length: trackData.body.duration_ms
+								length: trackData.body.duration_ms,
+								position: -1,
+								sourceName: 'spotify',
+								title: trackData.body.name,
+								uri: `https://open.spotify.com/track/${trackData.body.id}`
 							}
 						}
 					};
@@ -275,18 +212,6 @@ class SpotifyRest extends Rest {
 		try {
 			new URL(identifier);
 			let data = await super.resolve(identifier);
-			console.log(DataManager);
-
-			switch (data?.loadType) {
-				case "track":
-					
-					break;
-				case LoadType.PLAYLIST:
-					data.data.tracks.forEach((_, i) => {
-						data.data.tracks[i].source = source;
-					});
-					break;
-			}
 
 			return data;
 		} catch (e) {
@@ -296,19 +221,20 @@ class SpotifyRest extends Rest {
 			if (source !== 'spotify' || !searchData?.body.tracks) return super.resolve(`scsearch:${identifier}`);
 
 			return {
-				loadType: 'TRACK_LOADED',
+				loadType: 'track',
 				playlistInfo: {},
-				track: {
-					source: 'spotify',
-					metadata: {
+				data: {
+					info: {
 						title: searchData.body.tracks.items[0].name,
 						author: searchData.body.tracks.items[0].artists.map((k) => k.name).join(', '),
 						identifier: searchData.body.tracks.items[0].id,
 						isrc: searchData.body.tracks.items[0].external_ids.isrc,
 						isSeekable: true,
 						isStream: true,
-						albumArt: searchData.body.tracks.items[0].album.images[searchData.body.tracks.items[0].album.images.length - 1].url,
-						length: searchData.body.tracks.items[0].duration_ms
+						sourceName: "spotify",
+						artworkUrl: searchData.body.tracks.items[0].album.images[searchData.body.tracks.items[0].album.images.length - 1].url,
+						length: searchData.body.tracks.items[0].duration_ms,
+						uri: `https://open.spotify.com/track/${searchData.body.tracks.items[0].id}`
 					}
 				}
 			};
@@ -317,11 +243,28 @@ class SpotifyRest extends Rest {
 }
 
 declare module 'shoukaku' {
-	interface Track {
-		source: string;
-	}
 	interface PlayOptions {
-		[key: string]: any;
+		metadata: {
+			identifier: string;
+			isSeekable: boolean;
+			author: string;
+			length: number;
+			isStream: boolean;
+			position: number;
+			title: string;
+			uri?: string;
+			artworkUrl?: string;
+			isrc?: string;
+			sourceName: string;
+		};
+	}
+
+	interface PlaylistResult {
+		playlistInfo: {
+			selectedTrack: number;
+			name: string;
+			coverImg: string;
+		};
 	}
 }
 

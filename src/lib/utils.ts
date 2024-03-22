@@ -59,3 +59,25 @@ function getGuildInfo(guild: Guild | null) {
 	if (guild === null) return 'Direct Messages';
 	return `${guild.name}[${cyan(guild.id)}]`;
 }
+
+export function humanizeMs(ms: number): string {
+    // Convert milliseconds to seconds
+    const totalSeconds = Math.floor(ms / 1000);
+
+    // Calculate minutes and seconds
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    // Format minutes and seconds
+    const minutesStr = String(minutes).padStart(2, '0');
+    const secondsStr = String(seconds).padStart(2, '0');
+
+    return `${minutesStr}:${secondsStr}`;
+}
+
+export function capitalizeFirstLetter(input: string): string {
+    if (input.length === 0) {
+        return input;
+    }
+    return input.charAt(0).toUpperCase() + input.slice(1);
+}

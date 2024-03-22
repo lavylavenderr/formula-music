@@ -14,6 +14,9 @@ dependencies:
   '@sapphire/discord.js-utilities':
     specifier: 7.1.6
     version: 7.1.6
+  '@sapphire/fetch':
+    specifier: ^3.0.2
+    version: 3.0.2
   '@sapphire/framework':
     specifier: ^5.0.7
     version: 5.0.7
@@ -280,6 +283,11 @@ packages:
   /@sapphire/duration@1.1.2:
     resolution: {integrity: sha512-m+DpXedUHdnH3rM6P9Hiyb9dpdXKb8WeTAVIug0QuN8tarQedbymbOor+UFmBfCbKOkoW9HvGK10xDwDvSfKrw==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
+    dev: false
+
+  /@sapphire/fetch@3.0.2:
+    resolution: {integrity: sha512-Na3TP9B/ncq09YNj+9SWd2JXclTGYCIX+ZieGNfRsi38PpgE3hSSIn/7hAjpF/sV1uBfHHtc42mz24pEuEqZmQ==}
+    engines: {node: '>=v18'}
     dev: false
 
   /@sapphire/framework@5.0.7:

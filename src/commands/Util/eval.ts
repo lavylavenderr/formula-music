@@ -3,7 +3,7 @@ import { Command, type Args } from '@sapphire/framework';
 import { send } from '@sapphire/plugin-editable-commands';
 import { Type } from '@sapphire/type';
 import { codeBlock, isThenable } from '@sapphire/utilities';
-import type { Message } from 'discord.js';
+import { PermissionFlagsBits, type Message } from 'discord.js';
 import { inspect } from 'util';
 
 @ApplyOptions<Command.Options>({
@@ -11,6 +11,7 @@ import { inspect } from 'util';
 	description: 'Evals any JavaScript code',
 	quotes: [],
 	flags: ['async', 'hidden', 'showHidden', 'silent', 's'],
+	requiredUserPermissions: [PermissionFlagsBits.ManageChannels],
 	options: ['depth']
 })
 export class UserCommand extends Command {
