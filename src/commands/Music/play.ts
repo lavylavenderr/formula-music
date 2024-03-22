@@ -173,7 +173,6 @@ export class PlayCommand extends Command {
 			}
 
 			dispatcher.play();
-			console.log(dispatcher.current)
 			if (!dispatcher.current) dispatcher.play();
 
 			return interaction.editReply({
