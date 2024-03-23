@@ -18,6 +18,12 @@ export class PlayCommand extends Command {
 					.setDescription(this.description)
 					.addStringOption((option) =>
 						option.setName('query').setDescription('What would you like to play?').setAutocomplete(true).setRequired(true)
+					)
+					.addStringOption((option) =>
+						option
+							.setName('source')
+							.setDescription('Where would this query be searched for?')
+							.addChoices({ name: 'Spotify', value: 'spotify' }, { name: 'Soundcloud', value: 'soundcloud' })
 					);
 			},
 			{ idHints: ['1219431349774192690'] }
@@ -27,13 +33,16 @@ export class PlayCommand extends Command {
 	public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
 		await interaction.deferReply({ ephemeral: true });
 
+		let query = interaction.options.getString('query');
 		const shoukaku = this.container.shoukaku;
 		const node = shoukaku.options.nodeResolver(shoukaku.nodes);
-		const query = interaction.options.getString('query');
+		const source = interaction.options.getString('source') ?? 'spotify';
 
 		if (!query) {
 			return this.sendInvalidQueryReply(interaction);
 		}
+
+		if (source == 'soundcloud') query = 'scsearch:' + query;
 
 		const result = await node?.rest.resolve(query);
 
@@ -84,16 +93,11 @@ export class PlayCommand extends Command {
 			if (!dispatcher.current) dispatcher.play();
 		} else {
 			this.addToQueue(dispatcher, songInfo, trackArray);
-
-			if (trackArray.length !== 0) {
-				trackArray.forEach((track) => dispatcher!.queue.push(track));
-			}
-
 			if (!dispatcher.current) dispatcher.play();
 		}
 
 		return interaction.editReply({
-			embeds: [constructEmbed(this.generateEmbedData(result, songInfo, playlistInfo, dispatcher))]
+			embeds: [constructEmbed(this.generateEmbedData(result, songInfo, playlistInfo))]
 		});
 	}
 
@@ -113,7 +117,9 @@ export class PlayCommand extends Command {
 		dispatcher.queue.push(songInfo);
 
 		if (trackArray.length !== 0) {
-			trackArray.forEach((track) => dispatcher.queue.push(track));
+			trackArray.forEach((track) => {
+				dispatcher.queue.push(track);
+			});
 		}
 	}
 
@@ -147,7 +153,7 @@ export class PlayCommand extends Command {
 		});
 	}
 
-	private generateEmbedData(result: any, songInfo: any, playlistInfo: any, dispatcher: any) {
+	private generateEmbedData(result: any, songInfo: any, playlistInfo: any) {
 		return {
 			title: `Added ${result.loadType === 'playlist' ? 'Playlist' : 'Track'}`,
 			thumbnail: result.loadType === 'playlist' ? playlistInfo?.coverImg : songInfo.artworkUrl,
@@ -159,7 +165,7 @@ export class PlayCommand extends Command {
 				},
 				{
 					name: `${result.loadType === 'playlist' ? 'Playlist Length' : 'Track Length'}`,
-					value: String(result.loadType === 'playlist' ? dispatcher.queue.length + 1 : humanizeMs(songInfo.length)),
+					value: String(result.loadType === 'playlist' ? playlistInfo!.length : humanizeMs(songInfo.length)),
 					inline: true
 				},
 				{

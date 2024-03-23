@@ -133,7 +133,7 @@ class SpotifyPlayer extends Player {
 class SpotifyRest extends Rest {
 	// @ts-expect-error
 	// TODO: I cba to try to find a proper solution at the moment, I'll come back to this.
-	override async resolve(identifier: string, source: string) {
+	override async resolve(identifier: string) {
 		if (!spotifyAccessToken) await refreshSpotifyToken();
 
 		if (identifier.match(REGEX)) {
@@ -142,10 +142,7 @@ class SpotifyRest extends Rest {
 			switch (type) {
 				case 'playlist':
 					const playlistData = await spotifyApi.getPlaylist(id);
-					const playlistTracks = await spotifyApi.getPlaylistTracks(id, {
-						limit: 100,
-						offset: 0
-					});
+					const playlistTracks = await spotifyApi.getPlaylistTracks(id);
 					const trackArray = [];
 
 					if (playlistTracks.statusCode === 404)
@@ -177,7 +174,6 @@ class SpotifyRest extends Rest {
 					while (trackArray.length !== playlistData.body.tracks.total) {
 						const playlistTracksOnceAgain = await spotifyApi.getPlaylistTracks(id, {
 							offset: trackArray.length,
-							limit: 100
 						});
 
 						playlistTracksOnceAgain.body.items.forEach((result) => {
@@ -203,7 +199,7 @@ class SpotifyRest extends Rest {
 
 					return {
 						loadType: 'playlist',
-						playlistInfo: { selectedTrack: -1, name: playlistData.body.name, coverImg: playlistData.body.images[0].url },
+						playlistInfo: { selectedTrack: -1, length: playlistData.body.tracks.total,  name: playlistData.body.name, coverImg: playlistData.body.images[0].url },
 						data: { tracks: trackArray }
 					};
 				case 'track':
