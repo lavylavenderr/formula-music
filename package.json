@@ -7,7 +7,7 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "5.11.0",
-    "@sapphire/decorators": "^6.0.4",
+    "@sapphire/decorators": "^6.1.0",
     "@sapphire/discord.js-utilities": "7.1.6",
     "@sapphire/fetch": "^3.0.2",
     "@sapphire/framework": "^5.0.7",
@@ -24,17 +24,18 @@
     "prisma": "^5.11.0",
     "shoukaku": "^4.0.1",
     "spotify-uri": "^4.0.1",
-    "spotify-web-api-node": "^5.0.2"
+    "spotify-web-api-node": "^5.0.2",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@sapphire/cli": "^1.9.3",
     "@sapphire/prettier-config": "^2.0.0",
-    "@sapphire/ts-config": "^5.0.0",
-    "@types/node": "^20.11.5",
+    "@sapphire/ts-config": "^5.0.1",
+    "@types/node": "^20.11.30",
     "@types/ws": "^8.5.10",
-    "prettier": "^3.2.4",
+    "prettier": "^3.2.5",
     "tsc-watch": "^6.0.4",
-    "typescript": "^5.3.3"
+    "typescript": "^5.4.3"
   },
   "scripts": {
     "sapphire": "sapphire",

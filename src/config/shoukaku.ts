@@ -8,8 +8,8 @@ const REGEX = /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?(track|playlist
 
 let spotifyAccessToken: string | any;
 const spotifyApi = new spotifyWebApi({
-	clientId: '7ca2d37584a141029b013337e4a8673d',
-	clientSecret: 'e57dd7c03d3747daaea2723b9d3709f0'
+	clientId: process.env.SPOTIFY_CLIENT_ID,
+	clientSecret: process.env.SPOTIFY_CLIENT_SECRET
 });
 
 async function refreshSpotifyToken() {
@@ -211,7 +211,7 @@ class SpotifyRest extends Rest {
 
 					if (!trackData)
 						return {
-							loadType: "error",
+							loadType: 'error',
 							message: 'Unable to locate song'
 						};
 
@@ -304,7 +304,7 @@ declare module 'shoukaku' {
 export default {
 	structures: { rest: SpotifyRest, player: SpotifyPlayer },
 	restTimeout: 500000,
-	userAgent: "FormulaMusic/1.0",
+	userAgent: 'FormulaMusic/1.0',
 	moveOnDisconnect: true,
 	resumable: true,
 	reconnectTries: 100,
