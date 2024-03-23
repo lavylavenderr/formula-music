@@ -1,5 +1,5 @@
 import spotifyWebApi from 'spotify-web-api-node';
-import { LoadType, Player, PlayOptions, Rest, Track } from 'shoukaku';
+import { Player, PlayOptions, Rest, Track } from 'shoukaku';
 // import { parse, formatOpenURL } from 'spotify-uri';
 import { FormulaDispatcher } from '../lib/dispatcher';
 import { constructEmbed } from '../lib/embedbuilder';
@@ -142,7 +142,10 @@ class SpotifyRest extends Rest {
 			switch (type) {
 				case 'playlist':
 					const playlistData = await spotifyApi.getPlaylist(id);
-					const playlistTracks = await spotifyApi.getPlaylistTracks(id);
+					const playlistTracks = await spotifyApi.getPlaylistTracks(id, {
+						limit: 100,
+						offset: 0
+					});
 					const trackArray = [];
 
 					if (playlistTracks.statusCode === 404)
@@ -171,6 +174,33 @@ class SpotifyRest extends Rest {
 						});
 					}
 
+					while (trackArray.length !== playlistData.body.tracks.total) {
+						const playlistTracksOnceAgain = await spotifyApi.getPlaylistTracks(id, {
+							offset: trackArray.length,
+							limit: 100
+						});
+
+						playlistTracksOnceAgain.body.items.forEach((result) => {
+							if (!result.track) return;
+
+							trackArray.push({
+								info: {
+									artworkUrl: result.track.album.images[0].url,
+									author: result.track.artists.map((k) => k.name).join(', '),
+									identifier: result.track.id,
+									isSeekable: false,
+									isStream: false,
+									isrc: result.track.external_ids.isrc,
+									length: result.track.duration_ms,
+									position: -1,
+									sourceName: 'spotify',
+									title: result.track.name,
+									uri: `https://open.spotify.com/track/${result.track.id}`
+								}
+							});
+						});
+					}
+
 					return {
 						loadType: 'playlist',
 						playlistInfo: { selectedTrack: -1, name: playlistData.body.name, coverImg: playlistData.body.images[0].url },
@@ -181,7 +211,7 @@ class SpotifyRest extends Rest {
 
 					if (!trackData)
 						return {
-							loadType: LoadType.ERROR,
+							loadType: "error",
 							message: 'Unable to locate song'
 						};
 
@@ -205,7 +235,10 @@ class SpotifyRest extends Rest {
 						}
 					};
 				default:
-					break;
+					return {
+						loadType: 'error',
+						message: 'This type of link is not supported just yet.'
+					};
 			}
 		}
 
@@ -217,8 +250,8 @@ class SpotifyRest extends Rest {
 		} catch (e) {
 			let searchData;
 
-			if (source == 'spotify') searchData = await spotifyApi.searchTracks(identifier, { limit: 1 });
-			if (source !== 'spotify' || !searchData?.body.tracks) return super.resolve(`scsearch:${identifier}`);
+			searchData = await spotifyApi.searchTracks(identifier, { limit: 1 });
+			if (!searchData?.body.tracks) return super.resolve(`scsearch:${identifier}`);
 
 			return {
 				loadType: 'track',
@@ -231,7 +264,7 @@ class SpotifyRest extends Rest {
 						isrc: searchData.body.tracks.items[0].external_ids.isrc,
 						isSeekable: true,
 						isStream: true,
-						sourceName: "spotify",
+						sourceName: 'spotify',
 						artworkUrl: searchData.body.tracks.items[0].album.images[searchData.body.tracks.items[0].album.images.length - 1].url,
 						length: searchData.body.tracks.items[0].duration_ms,
 						uri: `https://open.spotify.com/track/${searchData.body.tracks.items[0].id}`
@@ -271,6 +304,7 @@ declare module 'shoukaku' {
 export default {
 	structures: { rest: SpotifyRest, player: SpotifyPlayer },
 	restTimeout: 500000,
+	userAgent: "FormulaMusic/1.0",
 	moveOnDisconnect: true,
 	resumable: true,
 	reconnectTries: 100,

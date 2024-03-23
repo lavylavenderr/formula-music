@@ -33,7 +33,7 @@ export class AutocompleteHandler extends InteractionHandler {
 	}
 
 	public override async parse(interaction: AutocompleteInteraction) {
-		if (interaction.commandId === '1219431349774192690') {
+		if (interaction.commandId === '1219431349774192690' || interaction.commandId === '1221001281368490026') {
 			try {
 				const focusedOption = interaction.options.getFocused(true);
 				if (focusedOption.name === 'query') {

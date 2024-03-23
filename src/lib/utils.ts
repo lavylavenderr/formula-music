@@ -64,15 +64,24 @@ export function humanizeMs(ms: number): string {
     // Convert milliseconds to seconds
     const totalSeconds = Math.floor(ms / 1000);
 
-    // Calculate minutes and seconds
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+    // Calculate hours, minutes, and seconds
+    const hours = Math.floor(totalSeconds / 3600);
+    const remainingSeconds = totalSeconds % 3600;
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
 
-    // Format minutes and seconds
+    // Format hours, minutes, and seconds
+    const hoursStr = String(hours).padStart(2, '0');
     const minutesStr = String(minutes).padStart(2, '0');
     const secondsStr = String(seconds).padStart(2, '0');
 
-    return `${minutesStr}:${secondsStr}`;
+    // Construct the result string
+    let result = `${minutesStr}:${secondsStr}`;
+    if (hours > 0) {
+        result = `${hoursStr}:${result}`;
+    }
+
+    return result;
 }
 
 export function capitalizeFirstLetter(input: string): string {
@@ -80,4 +89,12 @@ export function capitalizeFirstLetter(input: string): string {
         return input;
     }
     return input.charAt(0).toUpperCase() + input.slice(1);
+}
+
+export function splitIntoGroups<T>(arr: T[], groupSize: number): { index: number, content: any }[][] {
+    const groups: { index: number, content: T }[][] = [];
+    for (let i = 0; i < arr.length; i += groupSize) {
+        groups.push(arr.slice(i, i + groupSize).map((content, index) => ({ index: i + index, content })));
+    }
+    return groups;
 }

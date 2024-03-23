@@ -139,7 +139,8 @@ export class FormulaDispatcher {
 			this.player.constructor.name,
 			`Destroyed the player & connection @ guild "${this.guild.id}"\nReason: ${reason || 'No Reason Provided'}`
 		);
-
+		
+		this.player.setPaused(true);
 		shoukaku.leaveVoiceChannel(this.player.guildId);	
 		return queue.delete(this.guild.id);
 	}
