@@ -5,7 +5,6 @@ import options from "../config/shoukaku"
 
 export class ShoukakuHandler extends Shoukaku {
     constructor(client: FormulaBot) {
-        // @ts-expect-error
         super(new Connectors.DiscordJS(client), servers, options)
         this.on('ready',
             (name, reconnected) =>

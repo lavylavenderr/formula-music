@@ -1,6 +1,5 @@
 import spotifyWebApi from 'spotify-web-api-node';
 import { Player, PlayOptions, Rest, Track } from 'shoukaku';
-// import { parse, formatOpenURL } from 'spotify-uri';
 import { FormulaDispatcher } from '../lib/dispatcher';
 import { constructEmbed } from '../lib/embedbuilder';
 
@@ -131,9 +130,7 @@ class SpotifyPlayer extends Player {
 }
 
 class SpotifyRest extends Rest {
-	// @ts-expect-error
-	// TODO: I cba to try to find a proper solution at the moment, I'll come back to this.
-	override async resolve(identifier: string) {
+	override async resolve(identifier: string): Promise<any> {
 		if (!spotifyAccessToken) await refreshSpotifyToken();
 
 		if (identifier.match(REGEX)) {
