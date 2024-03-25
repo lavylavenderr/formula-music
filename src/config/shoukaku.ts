@@ -2,6 +2,7 @@ import spotifyWebApi from 'spotify-web-api-node';
 import { Player, PlayOptions, Rest, Track } from 'shoukaku';
 import { FormulaDispatcher } from '../lib/dispatcher';
 import { constructEmbed } from '../lib/embedbuilder';
+// import { container } from '@sapphire/pieces';
 
 const REGEX = /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?(track|playlist|album|artist)[\/:]([A-Za-z0-9]+)/;
 
@@ -129,8 +130,10 @@ class SpotifyPlayer extends Player {
 	}
 }
 
+// TODO: More efficient way to store queries in the database without messing with response time
 class SpotifyRest extends Rest {
 	override async resolve(identifier: string): Promise<any> {
+		// const { prisma } = container;
 		if (!spotifyAccessToken) await refreshSpotifyToken();
 
 		if (identifier.match(REGEX)) {
@@ -148,57 +151,101 @@ class SpotifyRest extends Rest {
 							message: 'This playlist does not exist.'
 						};
 
+					// const artistIds = new Set<string>();
+
+					// Extract unique artist IDs from all tracks in the playlist
 					for (const result of playlistTracks.body.items) {
-						if (!result.track) return;
+						if (!result.track) continue;
 
-						trackArray.push({
-							info: {
-								artworkUrl: result.track.album.images[0].url,
-								author: result.track.artists.map((k) => k.name).join(', '),
-								identifier: result.track.id,
-								isSeekable: false,
-								isStream: false,
-								isrc: result.track.external_ids.isrc,
-								length: result.track.duration_ms,
-								position: -1,
-								sourceName: 'spotify',
-								title: result.track.name,
-								uri: `https://open.spotify.com/track/${result.track.id}`
-							}
-						});
+						// for (const artist of result.track.artists) {
+						// 	artistIds.add(artist.id);
+						// }
+
+						trackArray.push(result.track); // Pushing track directly for later processing
 					}
 
-					while (trackArray.length !== playlistData.body.tracks.total) {
-						const playlistTracksOnceAgain = await spotifyApi.getPlaylistTracks(id, {
-							offset: trackArray.length,
-						});
+					// Fetch artist info for all unique artist IDs in a single batch
+					// const artistInfos = await Promise.all(Array.from(artistIds).map((artistId) => spotifyApi.getArtist(artistId)));
 
-						playlistTracksOnceAgain.body.items.forEach((result) => {
-							if (!result.track) return;
+					// Process artist info and insert/update into the database
+					// await Promise.all(
+					// 	artistInfos.map(async (artistInfo) => {
+					// 		const data = await prisma.artist.findUnique({ where: { spotifyId: artistInfo.body.id } });
+					// 		await prisma.artist.upsert({
+					// 			create: {
+					// 				name: artistInfo.body.name,
+					// 				spotifyId: artistInfo.body.id
+					// 			},
+					// 			update: {
+					// 				streams: !data ? 0 : data.streams++
+					// 			},
+					// 			where: {
+					// 				spotifyId: artistInfo.body.id
+					// 			}
+					// 		});
+					// 	})
+					// );
 
-							trackArray.push({
-								info: {
-									artworkUrl: result.track.album.images[0].url,
-									author: result.track.artists.map((k) => k.name).join(', '),
-									identifier: result.track.id,
-									isSeekable: false,
-									isStream: false,
-									isrc: result.track.external_ids.isrc,
-									length: result.track.duration_ms,
-									position: -1,
-									sourceName: 'spotify',
-									title: result.track.name,
-									uri: `https://open.spotify.com/track/${result.track.id}`
-								}
-							});
-						});
-					}
+					// Process tracks and insert/update into the database
+					// await Promise.all(
+					// 	trackArray.map(async (track) => {
+					// 		// Fetch artist info for each artist in the current track
+					// 		const trackArtistInfos = await Promise.all(track.artists.map((artist) => spotifyApi.getArtist(artist.id)));
+
+					// 		// Construct artist connection objects for the current track
+					// 		const artistConnectQueries = trackArtistInfos.map((artistInfo) => ({
+					// 			spotifyId: artistInfo.body.id
+					// 		}));
+
+					// 		// Upsert the song into the database
+					// 		await prisma.song.upsert({
+					// 			create: {
+					// 				title: track.name,
+					// 				spotifyId: track.id,
+					// 				isrc: track.external_ids.isrc!,
+					// 				artists: {
+					// 					connect: artistConnectQueries
+					// 				}
+					// 			},
+					// 			update: {
+					// 				artists: {
+					// 					connect: artistConnectQueries
+					// 				}
+					// 			},
+					// 			where: {
+					// 				spotifyId: track.id
+					// 			}
+					// 		});
+					// 	})
+					// );
 
 					return {
 						loadType: 'playlist',
-						playlistInfo: { selectedTrack: -1, length: playlistData.body.tracks.total,  name: playlistData.body.name, coverImg: playlistData.body.images[0].url },
-						data: { tracks: trackArray }
+						playlistInfo: {
+							selectedTrack: -1,
+							length: playlistData.body.tracks.total,
+							name: playlistData.body.name,
+							coverImg: playlistData.body.images[0].url
+						},
+						data: {
+							tracks: trackArray.map((track) => ({
+								info: {
+									artworkUrl: track.album.images[0].url,
+									author: track.artists.map((artist) => artist.name).join(', '),
+									identifier: track.id,
+									isSeekable: false,
+									isStream: false,
+									isrc: track.external_ids.isrc,
+									length: track.duration_ms,
+									position: -1,
+									sourceName: 'spotify',
+									title: track.name,
+									uri: `https://open.spotify.com/track/${track.id}`
+								}
+							}))
+						}
 					};
+
 				case 'track':
 					const trackData = await spotifyApi.getTrack(id);
 
@@ -207,6 +254,47 @@ class SpotifyRest extends Rest {
 							loadType: 'error',
 							message: 'Unable to locate song'
 						};
+
+					// for (const artist of trackData.body.artists) {
+					// 	const artistInfo = await spotifyApi.getArtist(artist.id);
+					// 	const data = await prisma.artist.findUnique({ where: { spotifyId: artistInfo.body.id } });
+
+					// 	const query = await prisma.artist.upsert({
+					// 		create: {
+					// 			name: artistInfo.body.name,
+					// 			spotifyId: artistInfo.body.id
+					// 		},
+					// 		update: {
+					// 			streams: !data ? 0 : data.streams++
+					// 		},
+					// 		where: {
+					// 			spotifyId: artistInfo.body.id
+					// 		}
+					// 	});
+
+					// 	await prisma.song.upsert({
+					// 		create: {
+					// 			title: trackData.body.name,
+					// 			spotifyId: trackData.body.id,
+					// 			isrc: trackData.body.external_ids.isrc!,
+					// 			artists: {
+					// 				connect: {
+					// 					id: query.id
+					// 				}
+					// 			}
+					// 		},
+					// 		update: {
+					// 			artists: {
+					// 				connect: {
+					// 					id: query.id
+					// 				}
+					// 			}
+					// 		},
+					// 		where: {
+					// 			spotifyId: trackData.body.id
+					// 		}
+					// 	});
+					// }
 
 					return {
 						loadType: 'track',
@@ -242,9 +330,51 @@ class SpotifyRest extends Rest {
 			return data;
 		} catch (e) {
 			let searchData;
+			// let { prisma } = container;
 
 			searchData = await spotifyApi.searchTracks(identifier, { limit: 1 });
 			if (!searchData?.body.tracks) return super.resolve(`scsearch:${identifier}`);
+
+			// for (const artist of searchData.body.tracks.items[0].artists) {
+			// 	const artistInfo = await spotifyApi.getArtist(artist.id);
+			// 	const data = await prisma.artist.findUnique({ where: { spotifyId: artistInfo.body.id } });
+
+			// 	const query = await prisma.artist.upsert({
+			// 		create: {
+			// 			name: artistInfo.body.name,
+			// 			spotifyId: artistInfo.body.id
+			// 		},
+			// 		update: {
+			// 			streams: !data ? 0 : data.streams++
+			// 		},
+			// 		where: {
+			// 			spotifyId: artistInfo.body.id
+			// 		}
+			// 	});
+
+			// 	await prisma.song.upsert({
+			// 		create: {
+			// 			title: searchData.body.tracks.items[0].name,
+			// 			spotifyId: searchData.body.tracks.items[0].id,
+			// 			isrc: searchData.body.tracks.items[0].external_ids.isrc!,
+			// 			artists: {
+			// 				connect: {
+			// 					id: query.id
+			// 				}
+			// 			}
+			// 		},
+			// 		update: {
+			// 			artists: {
+			// 				connect: {
+			// 					id: query.id
+			// 				}
+			// 			}
+			// 		},
+			// 		where: {
+			// 			spotifyId: searchData.body.tracks.items[0].id
+			// 		}
+			// 	});
+			// }
 
 			return {
 				loadType: 'track',

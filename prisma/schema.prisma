@@ -31,7 +31,7 @@ model Song {
   id        Int        @id @unique @default(autoincrement())
   title     String
   isrc      String
-  spotifyId String
+  spotifyId String     @unique
   playlists Playlist[]
   artists   Artist[]
 }
@@ -40,7 +40,6 @@ model Artist {
   id        Int    @id @unique @default(autoincrement())
   name      String
   songs     Song[]
-  spotifyId String
-  picture   String
+  spotifyId String @unique
   streams   Int    @default(0)
 }
