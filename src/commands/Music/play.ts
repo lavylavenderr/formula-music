@@ -67,6 +67,8 @@ export class PlayCommand extends Command {
 			case 'track':
 				songInfo = result.data.info;
 				break;
+			case 'error':
+				return this.sendNoTracksFoundReply(interaction);
 			default:
 				return this.sendNoTracksFoundReply(interaction);
 		}
