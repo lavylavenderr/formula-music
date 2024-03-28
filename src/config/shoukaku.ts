@@ -78,14 +78,14 @@ class SpotifyPlayer extends Player {
 				.catch(() => null);
 
 			try {
-				res = await dispatcher.player.node.rest.resolve(`http://5.78.115.239:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
+				res = await dispatcher.player.node.rest.resolve(`http://88.99.137.157:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
 			} catch {}
 
 			if (res?.loadType === 'error') {
-				// Give the SongDB 4 seconds to get it's shit together, 4 seems to be the sweet spot to prevent random skipping due to being sent an imcomplete track?
-				await new Promise((resolve) => setTimeout(resolve, 4000));
+				// Give the SongDB 6 and a half seconds to get it's shit together, 6.5 seems to be the sweet spot to prevent random skipping due to being sent an imcomplete track?
+				await new Promise((resolve) => setTimeout(resolve, 6500));
 
-				res = await dispatcher.player.node.rest.resolve(`http://5.78.115.239:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
+				res = await dispatcher.player.node.rest.resolve(`http://88.99.137.157:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
 
 				if (!res?.data) {
 					if (m) await m.edit('searching SoundCloud instead..').catch(() => null);
@@ -98,14 +98,17 @@ class SpotifyPlayer extends Player {
 						return dispatcher.destroy('Lavalink Error');
 					}
 				} else if (res?.loadType === 'error') {
-					if (m)
+					if (m) {
+						dispatcher.destroy('Lavalink Error');
 						return m.edit({
 							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
 						});
-					else
+					} else {
+						dispatcher.destroy('Lavalink Error');
 						return dispatcher.channel.send({
 							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
 						});
+					}
 				}
 			}
 
@@ -285,8 +288,6 @@ class SpotifyRest extends Rest {
 									spotifyId: artist.id
 								}
 							});
-
-
 						});
 
 						const artistConnectQueries = trackData.body.artists.forEach((artist) => ({

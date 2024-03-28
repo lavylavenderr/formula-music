@@ -70,7 +70,10 @@ export class FormulaDispatcher {
 				});
 
 				// Prefetch the next song;
-				if (this.queue[0]?.isrc) await fetch(`http://5.78.115.239:8001/track/${this.queue[0].isrc}`).catch((error) => console.log(error));
+				setInterval(async () => {
+					if (this.queue[0]?.isrc)
+						await fetch(`http://88.99.137.157:8001/track/${this.queue[0].isrc}`).catch((error) => console.log(error));
+				}, 20000);
 			})
 			.on('end', async () => {
 				await m?.delete().catch(() => null);
@@ -139,9 +142,9 @@ export class FormulaDispatcher {
 			this.player.constructor.name,
 			`Destroyed the player & connection @ guild "${this.guild.id}"\nReason: ${reason || 'No Reason Provided'}`
 		);
-		
+
 		this.player.setPaused(true);
-		shoukaku.leaveVoiceChannel(this.player.guildId);	
+		shoukaku.leaveVoiceChannel(this.player.guildId);
 		return queue.delete(this.guild.id);
 	}
 }

@@ -5,6 +5,8 @@ import { GatewayIntentBits, Partials } from 'discord.js';
 import { join } from 'path';
 import { ShoukakuHandler } from './lavalink';
 import { Queue } from './queue';
+import '@sapphire/plugin-api/register';
+import '@sapphire/plugin-scheduled-tasks/register';
 
 export class FormulaBot extends SapphireClient {
 	private rootData = getRootData();
@@ -17,6 +19,15 @@ export class FormulaBot extends SapphireClient {
 				level: LogLevel.Debug
 			},
 			shards: 'auto',
+			api: {
+				automaticallyConnect: true,
+				prefix: 'api/',
+				origin: '*',
+				listenOptions: {
+					// funny story, this is my mcdonalds store number!
+					port: Number(process.env.PORT! || 39837)
+				}
+			},
 			intents: [
 				GatewayIntentBits.DirectMessageReactions,
 				GatewayIntentBits.DirectMessages,
@@ -29,6 +40,15 @@ export class FormulaBot extends SapphireClient {
 				GatewayIntentBits.GuildVoiceStates,
 				GatewayIntentBits.MessageContent
 			],
+			tasks: {
+				bull: {
+					connection: {
+						port: parseInt(process.env.REDIS_PORT!),
+						password: process.env.REDIS_PASSWORD,
+						host: process.env.REDIS_HOST
+					}
+				}
+			},
 			partials: [Partials.Channel],
 			loadMessageCommandListeners: true
 		});
@@ -39,8 +59,8 @@ export class FormulaBot extends SapphireClient {
 
 	public override async login(token?: string) {
 		container.prisma = new PrismaClient();
-        container.shoukaku = new ShoukakuHandler(this);
-        container.queue = new Queue(this);
+		container.shoukaku = new ShoukakuHandler(this);
+		container.queue = new Queue(this);
 
 		return super.login(token);
 	}
@@ -54,7 +74,7 @@ export class FormulaBot extends SapphireClient {
 declare module '@sapphire/pieces' {
 	interface Container {
 		prisma: PrismaClient;
-        shoukaku: ShoukakuHandler;
-        queue: Queue
+		shoukaku: ShoukakuHandler;
+		queue: Queue;
 	}
 }

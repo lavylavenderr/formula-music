@@ -14,8 +14,9 @@ datasource db {
 }
 
 model User {
-  discordId String     @unique
-  playlists Playlist[]
+  discordId    String        @unique
+  spotifyCreds SpotifyCreds?
+  playlists    Playlist[]
 }
 
 model Playlist {
@@ -34,6 +35,15 @@ model Song {
   spotifyId String     @unique
   playlists Playlist[]
   artists   Artist[]
+}
+
+model SpotifyCreds {
+  discordUser  User   @relation(fields: [discordId], references: [discordId])
+  discordId    String @unique
+  accessToken  String
+  refreshToken String
+
+  lastUpdated DateTime @default(now())
 }
 
 model Artist {
