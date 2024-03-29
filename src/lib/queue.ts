@@ -23,7 +23,7 @@ export class Queue extends Map {
 		});
 
 		// Catch this, even though in practice it actually works, dunno why however, it's annoying LOL
-		await player.setGlobalVolume(50).catch();
+		await player.setGlobalVolume(1).catch();
 		this.client.logger.info(player.constructor.name, `New connection @ guild "${guild.id}"`);
 
 		const dispatcher = new FormulaDispatcher({
@@ -35,8 +35,11 @@ export class Queue extends Map {
 		});
 
 		dispatcher.queue.push(track);
+
+		// Set up dispatcher and add it to the queue
 		this.set(guild.id, dispatcher);
 		this.client.logger.info(dispatcher.constructor.name, `New player dispatcher @ guild "${guild.id}"`);
+
 		return dispatcher;
 	}
 }

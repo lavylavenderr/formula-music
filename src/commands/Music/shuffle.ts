@@ -1,7 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { constructEmbed } from '../../lib/embedbuilder';
-import { prefetchSong } from '../../lib/music';
 
 @ApplyOptions<Command.Options>({
 	description: 'Shuffle all the songs in the queue.',
@@ -36,7 +35,6 @@ export class UserCommand extends Command {
 			});
 
 		dispatcher.queue = dispatcher.queue.sort(() => Math.random() - 0.5);
-		await prefetchSong(dispatcher);
 
 		return interaction.editReply({
 			embeds: [

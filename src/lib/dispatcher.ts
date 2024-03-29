@@ -72,7 +72,7 @@ export class FormulaDispatcher {
 				// Prefetch the next song;
 				setInterval(async () => {
 					if (this.queue[0]?.isrc)
-						await fetch(`http://88.99.137.157:8001/track/${this.queue[0].isrc}`).catch((error) => console.log(error));
+						await fetch(`https://sneaky-vulpine.up.railway.app/track/${this.queue[0].isrc}`).catch((error) => console.log(error));
 				}, 20000);
 			})
 			.on('end', async () => {

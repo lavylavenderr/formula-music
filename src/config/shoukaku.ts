@@ -78,36 +78,35 @@ class SpotifyPlayer extends Player {
 				.catch(() => null);
 
 			try {
-				res = await dispatcher.player.node.rest.resolve(`http://88.99.137.157:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
+				res = await dispatcher.player.node.rest.resolve(`https://sneaky-vulpine.up.railway.app/track/${encodeURIComponent(playable.metadata.isrc!)}`);
 			} catch {}
 
 			if (res?.loadType === 'error') {
 				// Give the SongDB 6 and a half seconds to get it's shit together, 6.5 seems to be the sweet spot to prevent random skipping due to being sent an imcomplete track?
 				await new Promise((resolve) => setTimeout(resolve, 6500));
 
-				res = await dispatcher.player.node.rest.resolve(`http://88.99.137.157:8001/track/${encodeURIComponent(playable.metadata.isrc!)}`);
+				res = await dispatcher.player.node.rest.resolve(`https://sneaky-vulpine.up.railway.app/track/${encodeURIComponent(playable.metadata.isrc!)}`);
 
-				if (!res?.data) {
-					if (m) await m.edit('searching SoundCloud instead..').catch(() => null);
+				if (res?.loadType === 'error') {
+					if (m) await m.edit('Searching SoundCloud instead..').catch(() => null);
 					const soundCloudRes = await dispatcher.player.node.rest.resolve(
 						`scsearch: ${playable.metadata.author} - ${playable.metadata.title}`
 					);
 
 					if (!soundCloudRes || soundCloudRes.loadType === 'error') {
-						if (m) m.delete().catch(() => null);
+						if (m) {
+							dispatcher.destroy('Lavalink Error');
+							m.edit({
+								embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
+							});
+						} else {
+							dispatcher.destroy('Lavalink Error');
+							dispatcher.channel.send({
+								embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
+							});
+						}
+
 						return dispatcher.destroy('Lavalink Error');
-					}
-				} else if (res?.loadType === 'error') {
-					if (m) {
-						dispatcher.destroy('Lavalink Error');
-						return m.edit({
-							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
-						});
-					} else {
-						dispatcher.destroy('Lavalink Error');
-						return dispatcher.channel.send({
-							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
-						});
 					}
 				}
 			}
@@ -452,10 +451,12 @@ declare module 'shoukaku' {
 
 export default {
 	structures: { rest: SpotifyRest, player: SpotifyPlayer },
-	restTimeout: 500000,
+	restTimeout: 20000,
 	userAgent: 'FormulaMusic/1.0',
 	moveOnDisconnect: true,
 	resumable: true,
-	reconnectTries: 100,
-	resumableTimeout: 30
+	reconnectTries: 10,
+	resumableTimeout: 30,
+	resumeByLibrary: true,
+	voiceConnectionTimeout: 30000
 };
