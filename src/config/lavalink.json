@@ -3,5 +3,10 @@
         "name": "Fennec",
         "url": "88.99.137.157:8000",
         "auth": "thisistheformula"
+    },
+    {
+        "name": "Blossom",
+        "url": "5.78.115.239:8000",
+        "auth": "thisistheformula"
     }
 ]
