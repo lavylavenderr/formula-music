@@ -1,9 +1,24 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { GuildMember, TextChannel } from 'discord.js';
+import { CommandInteraction, GuildMember, TextChannel } from 'discord.js';
 import { constructEmbed } from '../../lib/embedbuilder';
 import { capitalizeFirstLetter, humanizeMs } from '../../lib/utils';
 import { FormulaDispatcher } from '../../lib/dispatcher';
+
+interface ModifiedTrackData {
+	identifier: string;
+	isSeekable: boolean;
+	author: string;
+	length: number;
+	isStream: boolean;
+	requestedBy?: string;
+	position: number;
+	title: string;
+	uri?: string;
+	artworkUrl?: string;
+	isrc?: string;
+	sourceName: string;
+}
 
 @ApplyOptions<Command.Options>({
 	description: 'Play music!',
@@ -23,7 +38,11 @@ export class PlayCommand extends Command {
 						option
 							.setName('source')
 							.setDescription('Where would this query be searched for?')
-							.addChoices({ name: 'Spotify', value: 'spotify' }, { name: 'Soundcloud', value: 'soundcloud' })
+							.addChoices(
+								{ name: 'Soundcloud', value: 'soundcloud' },
+								{ name: 'Apple Music', value: 'apple' },
+								{ name: 'Deezer', value: 'deezer' }
+							)
 					);
 			},
 			{ idHints: ['1219431349774192690'] }
@@ -43,6 +62,8 @@ export class PlayCommand extends Command {
 		}
 
 		if (source == 'soundcloud') query = 'scsearch:' + query;
+		else if (source == 'deezer') query = 'dzsearch:' + query;
+		else if (source == 'apple') query = 'amsearch:' + query;
 
 		const result = await node?.rest.resolve(query);
 
@@ -57,15 +78,17 @@ export class PlayCommand extends Command {
 
 		switch (result.loadType) {
 			case 'search':
-				songInfo = result.data[0].info;
+				songInfo = result.data[0].info as ModifiedTrackData;
+				songInfo.requestedBy = interaction.user.id;
 				break;
 			case 'empty':
 				return this.sendNoTracksFoundReply(interaction);
 			case 'playlist':
-				({ songInfo, playlistInfo, trackArray } = this.processPlaylist(result));
+				({ songInfo, playlistInfo, trackArray } = this.processPlaylist(result, interaction));
 				break;
 			case 'track':
-				songInfo = result.data.info;
+				songInfo = result.data.info as ModifiedTrackData;
+				songInfo.requestedBy = interaction.user.id;
 				break;
 			case 'error':
 				return this.sendNoTracksFoundReply(interaction);
@@ -103,13 +126,17 @@ export class PlayCommand extends Command {
 		});
 	}
 
-	private processPlaylist(result: any) {
+	private processPlaylist(result: any, interaction: CommandInteraction) {
 		const songInfo = result.data.tracks.shift()!.info;
 		const playlistInfo = result.playlistInfo;
 		const trackArray: any[] = [];
 
 		for (const track of result.data.tracks) {
-			trackArray.push(track.info);
+			const modifiedData = {
+				...track.info,
+				requestedBy: interaction.user.id
+			};
+			trackArray.push(modifiedData);
 		}
 
 		return { songInfo, playlistInfo, trackArray };
@@ -175,7 +202,7 @@ export class PlayCommand extends Command {
 					value:
 						result.loadType === 'playlist'
 							? String(humanizeMs(result.data.tracks.reduce((acc: any, obj: any) => acc + obj.info.length, 0)))
-							: capitalizeFirstLetter(songInfo.sourceName ?? 'Unokwn'),
+							: capitalizeFirstLetter(songInfo.sourceName ?? 'Unknown').replace('Applemusic', 'Apple Music'),
 					inline: true
 				}
 			]

@@ -98,3 +98,50 @@ export function splitIntoGroups<T>(arr: T[], groupSize: number): { index: number
     }
     return groups;
 }
+
+export function timeToSeconds(timeString: string): number | null {
+    const timeRegex = /^(\d{1,2}):(\d{2})$/;
+    const match = timeString.match(timeRegex);
+    
+    if (!match) {
+        console.error("Invalid time format. Please use 'mm:ss' or 'm:ss'");
+        return null;
+    }
+    
+    const minutes = parseInt(match[1]);
+    const seconds = parseInt(match[2]);
+    
+    if (minutes < 0 || seconds < 0 || seconds > 59) {
+        console.error("Invalid time values. Minutes and seconds should be between 0-59.");
+        return null;
+    }
+    
+    const totalSeconds = minutes * 60 + seconds;
+    return totalSeconds;
+}
+
+export function millisecondsToMinutesSeconds(milliseconds: number): string {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    const minutesStr = String(minutes).padStart(2, '0');
+    const secondsStr = String(seconds).padStart(2, '0');
+    
+    return `${minutesStr}:${secondsStr}`;
+}
+
+export function generateLoadingBar(startMs: number, endMs: number, currentMs: number, barLength: number): string {
+    currentMs = Math.max(startMs, Math.min(endMs, currentMs));
+    
+    const progress = (currentMs - startMs) / (endMs - startMs);
+    
+    const completedSegments = Math.floor(progress * barLength);
+    const remainingSegments = barLength - completedSegments;
+    const completedBar = '▬'.repeat(completedSegments);
+    const remainingBar = '▬'.repeat(remainingSegments);
+    const progressBar = `${completedBar}🔘${remainingBar}`;
+    
+    return progressBar;
+}

@@ -20,10 +20,10 @@ export class Queue extends Map {
 			guildId: guild.id,
 			shardId: guild.shardId,
 			channelId: member.voice.channelId!
-		});
+		}) as any;
 
 		// Catch this, even though in practice it actually works, dunno why however, it's annoying LOL
-		await player.setGlobalVolume(1).catch();
+		await player.setGlobalVolume(25).catch();
 		this.client.logger.info(player.constructor.name, `New connection @ guild "${guild.id}"`);
 
 		const dispatcher = new FormulaDispatcher({

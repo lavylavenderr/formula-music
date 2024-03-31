@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
+import { ActivityType } from 'discord.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -12,6 +13,7 @@ export class UserEvent extends Listener {
 	public override run() {
 		this.printBanner();
 		this.printStoreDebugInformation();
+		this.container.client.user?.setActivity("DJ Khaled's sick beats", { type: ActivityType.Playing });
 	}
 
 	private printBanner() {

@@ -2,7 +2,6 @@ import spotifyWebApi from 'spotify-web-api-node';
 import { Player, PlayOptions, Rest, Track } from 'shoukaku';
 import { FormulaDispatcher } from '../lib/dispatcher';
 import { constructEmbed } from '../lib/embedbuilder';
-import { container } from '@sapphire/pieces';
 
 const REGEX = /(?:https:\/\/open\.spotify\.com\/|spotify:)(?:.+)?(track|playlist|album|artist)[\/:]([A-Za-z0-9]+)/;
 
@@ -22,7 +21,7 @@ async function refreshSpotifyToken() {
 
 class SpotifyPlayer extends Player {
 	async playTrackNew(playable: PlayOptions, dispatcher: FormulaDispatcher) {
-		// Check if the source is YouTube
+		// Lovely Youtube
 		if (playable.metadata.sourceName === 'youtube') {
 			let data;
 			const meta = playable.metadata;
@@ -42,6 +41,68 @@ class SpotifyPlayer extends Player {
 			playable.track = data.encoded;
 		}
 
+		// Deezer or Spotify or Apple Music (All streamed from Deezer)
+		console.log(playable.metadata.sourceName)
+		if (
+			playable.metadata.sourceName === 'deezer' ||
+			playable.metadata.sourceName === 'spotify' ||
+			playable.metadata.sourceName === 'applemusic'
+		) {
+			let m;
+			let data;
+
+			m = await dispatcher.channel
+				.send({
+					embeds: [
+						constructEmbed({
+							description: '<:deezer:1223917076293357619> Attempting to stream track..'
+						})
+					]
+				})
+				.catch(() => null);
+
+			const res = await dispatcher.player.node.rest.resolve(`dzisrc:${playable.metadata.isrc}`);
+
+			if (res?.loadType === 'error') {
+				if (m)
+					await m
+						.edit({
+							embeds: [
+								constructEmbed({
+									description: '<:soundcloud:1220152120624545864> Searching SoundCloud instead...'
+								})
+							]
+						})
+						.catch(() => null);
+				const soundCloudRes = await dispatcher.player.node.rest.resolve(`scsearch: ${playable.metadata.author} - ${playable.metadata.title}`);
+
+				if (!soundCloudRes || soundCloudRes.loadType === 'error') {
+					if (m) {
+						dispatcher.destroy('Lavalink Error');
+						m.edit({
+							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
+						});
+					} else {
+						dispatcher.destroy('Lavalink Error');
+						dispatcher.channel.send({
+							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
+						});
+					}
+
+					return dispatcher.destroy('Lavalink Error');
+				}
+			}
+
+			if (!res?.data) {
+				return dispatcher.play();
+			}
+
+			data = res!.data as Track;
+			playable.track = data.encoded;
+			if (m) await m.delete().catch(() => null);
+		}
+
+		// Soundcloud!
 		if (playable.metadata.sourceName === 'soundcloud') {
 			let data;
 			const meta = playable.metadata;
@@ -61,64 +122,7 @@ class SpotifyPlayer extends Player {
 			playable.track = data.encoded;
 		}
 
-		// If the source is Spotify
-		if (playable.metadata.sourceName === 'spotify') {
-			let m;
-			let data;
-			let res;
-
-			m = await dispatcher.channel
-				.send({
-					embeds: [
-						constructEmbed({
-							description: '<:spotify:1219522954174529578> Attempting to download track from Spotify...'
-						})
-					]
-				})
-				.catch(() => null);
-
-			try {
-				res = await dispatcher.player.node.rest.resolve(`https://sneaky-vulpine.up.railway.app/track/${encodeURIComponent(playable.metadata.isrc!)}`);
-			} catch {}
-
-			if (res?.loadType === 'error') {
-				// Give the SongDB 6 and a half seconds to get it's shit together, 6.5 seems to be the sweet spot to prevent random skipping due to being sent an imcomplete track?
-				await new Promise((resolve) => setTimeout(resolve, 6500));
-
-				res = await dispatcher.player.node.rest.resolve(`https://sneaky-vulpine.up.railway.app/track/${encodeURIComponent(playable.metadata.isrc!)}`);
-
-				if (res?.loadType === 'error') {
-					if (m) await m.edit('Searching SoundCloud instead..').catch(() => null);
-					const soundCloudRes = await dispatcher.player.node.rest.resolve(
-						`scsearch: ${playable.metadata.author} - ${playable.metadata.title}`
-					);
-
-					if (!soundCloudRes || soundCloudRes.loadType === 'error') {
-						if (m) {
-							dispatcher.destroy('Lavalink Error');
-							m.edit({
-								embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
-							});
-						} else {
-							dispatcher.destroy('Lavalink Error');
-							dispatcher.channel.send({
-								embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
-							});
-						}
-
-						return dispatcher.destroy('Lavalink Error');
-					}
-				}
-			}
-
-			// Assign misc data to the object so it's accessible outside of this function.
-			data = res!.data as Track;
-			playable.metadata = data.info;
-			playable.track = data.encoded;
-			if (m) m.delete().catch(() => null);
-		}
-
-		// Http source
+		// If a URL is provided.
 		if (playable.metadata.sourceName === 'http') {
 			const res = await dispatcher.player.node.rest.resolve(playable.metadata.uri!);
 			const data = res?.data as Track;
@@ -135,9 +139,9 @@ class SpotifyPlayer extends Player {
 class SpotifyRest extends Rest {
 	override async resolve(identifier: string): Promise<any> {
 		try {
-			const { prisma } = container;
 			if (!spotifyAccessToken) await refreshSpotifyToken();
 
+			// Independent Spotify Resolver because yes.
 			if (identifier.match(REGEX)) {
 				const [, type, id] = identifier.match(REGEX) ?? [];
 
@@ -153,83 +157,23 @@ class SpotifyRest extends Rest {
 								message: 'This playlist does not exist.'
 							};
 
-						const artistIds: { id: string; name: string }[] = [];
-
-						// Extract unique artist IDs from all tracks in the playlist
+						// Filter through stuff
 						for (const result of playlistTracks.body.items) {
 							if (!result.track) continue;
-
-							for (const artist of result.track.artists) {
-								artistIds.push({ id: artist.id, name: artist.name });
-							}
-
 							trackArray.push(result.track);
 						}
 
 						while (trackArray.length !== playlistData.body.tracks.total) {
-							// @ts-expect-error
+							// TODO: fix types here	
 							const playlistTracks = await spotifyApi.getPlaylistTracks(id, {
 								offset: trackArray.length
-							});
+							}) as any;
 
-							// @ts-expect-error
 							for (const result of playlistTracks.body.items) {
 								if (!result.track) continue;
-
-								for (const artist of result.track.artists) {
-									artistIds.push({ id: artist.id, name: artist.name });
-								}
-
 								trackArray.push(result.track);
 							}
 						}
-
-						// Process artist info and insert/update into the database
-						artistIds.forEach(async (artist) => {
-							await prisma.artist.upsert({
-								create: {
-									name: artist.name,
-									spotifyId: artist.id
-								},
-								update: {
-									streams: {
-										increment: 1
-									}
-								},
-								where: {
-									spotifyId: artist.id
-								}
-							});
-						});
-
-						// Process tracks and insert/update into the database
-						trackArray.forEach(async (track) => {
-							// Construct artist connection objects for the current track
-							// @ts-expect-error
-							const artistConnectQueries = track.artists.forEach((artist) => ({
-								spotifyId: artist.id
-							}));
-
-							// Upsert the song into the database
-							await prisma.song.upsert({
-								create: {
-									title: track.name,
-									spotifyId: track.id,
-									isrc: track.external_ids.isrc!,
-									artists: {
-										connect: artistConnectQueries
-									}
-								},
-								update: {
-									artists: {
-										connect: artistConnectQueries
-									}
-								},
-								where: {
-									spotifyId: track.id
-								}
-							});
-						});
 
 						return {
 							loadType: 'playlist',
@@ -260,60 +204,12 @@ class SpotifyRest extends Rest {
 
 					case 'track':
 						const trackData = await spotifyApi.getTrack(id);
-						const artists: { id: string; name: string }[] = [];
 
 						if (!trackData)
 							return {
 								loadType: 'error',
 								message: 'Unable to locate song'
 							};
-
-						trackData.body.artists.forEach((artist) => {
-							artists.push({ id: artist.id, name: artist.name });
-						});
-
-						artists.forEach(async (artist) => {
-							await prisma.artist.upsert({
-								create: {
-									name: artist.name,
-									spotifyId: artist.id
-								},
-								update: {
-									streams: {
-										increment: 1
-									}
-								},
-								where: {
-									spotifyId: artist.id
-								}
-							});
-						});
-
-						const artistConnectQueries = trackData.body.artists.forEach((artist) => ({
-							spotifyId: artist.id
-						}));
-
-						// Upsert the song into the database
-						await prisma.song.upsert({
-							create: {
-								title: trackData.body.name,
-								spotifyId: trackData.body.id,
-								isrc: trackData.body.external_ids.isrc!,
-								artists: {
-									// @ts-expect-error
-									connect: artistConnectQueries
-								}
-							},
-							update: {
-								artists: {
-									// @ts-expect-error
-									connect: artistConnectQueries
-								}
-							},
-							where: {
-								spotifyId: trackData.body.id
-							}
-						});
 
 						return {
 							loadType: 'track',
@@ -353,46 +249,6 @@ class SpotifyRest extends Rest {
 				searchData = await spotifyApi.searchTracks(identifier, { limit: 1 });
 				if (!searchData?.body.tracks) return super.resolve(`scsearch:${identifier}`);
 
-				for (const artist of searchData.body.tracks.items[0].artists) {
-					const query = await prisma.artist.upsert({
-						create: {
-							name: artist.name,
-							spotifyId: artist.id
-						},
-						update: {
-							streams: {
-								increment: 1
-							}
-						},
-						where: {
-							spotifyId: artist.id
-						}
-					});
-
-					await prisma.song.upsert({
-						create: {
-							title: searchData.body.tracks.items[0].name,
-							spotifyId: searchData.body.tracks.items[0].id,
-							isrc: searchData.body.tracks.items[0].external_ids.isrc!,
-							artists: {
-								connect: {
-									id: query.id
-								}
-							}
-						},
-						update: {
-							artists: {
-								connect: {
-									id: query.id
-								}
-							}
-						},
-						where: {
-							spotifyId: searchData.body.tracks.items[0].id
-						}
-					});
-				}
-
 				return {
 					loadType: 'track',
 					playlistInfo: {},
@@ -431,6 +287,7 @@ declare module 'shoukaku' {
 			author: string;
 			length: number;
 			isStream: boolean;
+			requestedBy?: string;
 			position: number;
 			title: string;
 			uri?: string;

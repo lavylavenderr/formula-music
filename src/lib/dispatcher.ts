@@ -4,12 +4,16 @@ import { Player } from 'shoukaku';
 import { container } from '@sapphire/framework';
 import { constructEmbed } from './embedbuilder';
 
+interface ModifiedPlayer extends Player {
+	playTrackNew: (playable: any, dispatcher: any) => Promise<void>;
+}
+
 export class FormulaDispatcher {
 	// Properties
 	client: FormulaBot;
 	guild: Guild;
 	channel: TextChannel;
-	player: Player;
+	player: ModifiedPlayer;
 	queue: any[];
 	repeat: 'off' | 'one' | 'all';
 	current: any | null;
@@ -27,7 +31,7 @@ export class FormulaDispatcher {
 		client: FormulaBot;
 		guild: Guild;
 		channel: TextChannel;
-		player: Player;
+		player: ModifiedPlayer;
 		voiceChannel: VoiceBasedChannel;
 	}) {
 		this.client = client;
@@ -55,25 +59,15 @@ export class FormulaDispatcher {
 					_notifiedOnce = false;
 				}
 
-				if (this.current.sourceName === 'spotify') {
+				if (this.current.sourceName === 'soundcloud') {
 					description = `<:spotify:1219522954174529578> Now playing: [**${this.current.title} by ${this.current.author}**](https://open.spotify.com/track/${this.current.identifier})`;
-				} else if (this.current.sourceName === 'youtube') {
-					description = `<:youtube:1219602806135197706> Now playing: [**${this.current.title} by ${this.current.author}**](${this.current.uri})`;
-				} else if (this.current.sourceName === 'soundcloud') {
-					description = `<:soundcloud:1220152120624545864> Now playing: [**${this.current.title} by ${this.current.author}**](${this.current.uri})`;
 				} else {
-					description = `Now playing: [**${this.current.title || 'Unknown'} by ${this.current.author || 'Unknown'}**](${this.current.uri})`;
+					description = `<:deezer:1223917076293357619> Now playing: [**${this.current.title || 'Unknown'} by ${this.current.author || 'Unknown'}**](${this.current.uri})`;
 				}
 
 				m = await this.channel.send({
 					embeds: [constructEmbed({ description })]
 				});
-
-				// Prefetch the next song;
-				setInterval(async () => {
-					if (this.queue[0]?.isrc)
-						await fetch(`https://sneaky-vulpine.up.railway.app/track/${this.queue[0].isrc}`).catch((error) => console.log(error));
-				}, 20000);
 			})
 			.on('end', async () => {
 				await m?.delete().catch(() => null);
@@ -131,7 +125,6 @@ export class FormulaDispatcher {
 				.catch(() => null);
 		}
 
-		// @ts-expect-error
 		return this.player.playTrackNew({ metadata: this.current }, this);
 	}
 
