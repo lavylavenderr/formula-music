@@ -21,7 +21,7 @@ export class FormulaBot extends SapphireClient {
 			shards: 'auto',
 			api: {
 				automaticallyConnect: true,
-				prefix: 'api/',
+				prefix: '/',
 				origin: '*',
 				listenOptions: {
 					// funny story, this is my mcdonalds store number!
