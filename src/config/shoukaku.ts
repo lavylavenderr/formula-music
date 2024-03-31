@@ -25,7 +25,7 @@ class SpotifyPlayer extends Player {
 		if (playable.metadata.sourceName === 'youtube') {
 			let data;
 			const meta = playable.metadata;
-			const res = await dispatcher.player.node.rest.resolve(`${meta.author} - ${meta.title}`);
+			const res = await dispatcher.player.node.rest.resolve(`${meta.uri}`);
 
 			if (!res?.data) {
 				return dispatcher.play();
@@ -36,7 +36,6 @@ class SpotifyPlayer extends Player {
 		}
 
 		// Deezer or Spotify or Apple Music (All streamed from Deezer)
-		console.log(playable.metadata.sourceName);
 		if (
 			playable.metadata.sourceName === 'deezer' ||
 			playable.metadata.sourceName === 'spotify' ||

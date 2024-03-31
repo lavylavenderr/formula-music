@@ -61,6 +61,8 @@ export class FormulaDispatcher {
 
 				if (this.current.sourceName === 'soundcloud') {
 					description = `<:soundcloud:1220152120624545864> Now playing: [**${this.current.title} by ${this.current.author}**](https://open.spotify.com/track/${this.current.identifier})`;
+				} else if (this.current.sourceName === 'youtube') {
+					description = `<:youtube:1219602806135197706> Now playing: [**${this.current.title || 'Unknown'} by ${this.current.author || 'Unknown'}**](${this.current.uri})`;
 				} else {
 					description = `<:deezer:1223917076293357619> Now playing: [**${this.current.title || 'Unknown'} by ${this.current.author || 'Unknown'}**](${this.current.uri})`;
 				}
