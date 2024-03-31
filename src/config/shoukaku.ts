@@ -25,12 +25,6 @@ class SpotifyPlayer extends Player {
 		if (playable.metadata.sourceName === 'youtube') {
 			let data;
 			const meta = playable.metadata;
-
-			if (playable.track) {
-				playable.track = playable.track;
-				return super.playTrack(playable);
-			}
-
 			const res = await dispatcher.player.node.rest.resolve(`${meta.author} - ${meta.title}`);
 
 			if (!res?.data) {
@@ -42,7 +36,7 @@ class SpotifyPlayer extends Player {
 		}
 
 		// Deezer or Spotify or Apple Music (All streamed from Deezer)
-		console.log(playable.metadata.sourceName)
+		console.log(playable.metadata.sourceName);
 		if (
 			playable.metadata.sourceName === 'deezer' ||
 			playable.metadata.sourceName === 'spotify' ||
@@ -164,10 +158,10 @@ class SpotifyRest extends Rest {
 						}
 
 						while (trackArray.length !== playlistData.body.tracks.total) {
-							// TODO: fix types here	
-							const playlistTracks = await spotifyApi.getPlaylistTracks(id, {
+							// TODO: fix types here
+							const playlistTracks = (await spotifyApi.getPlaylistTracks(id, {
 								offset: trackArray.length
-							}) as any;
+							})) as any;
 
 							for (const result of playlistTracks.body.items) {
 								if (!result.track) continue;

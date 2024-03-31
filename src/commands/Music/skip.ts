@@ -25,7 +25,7 @@ export class SkipCommand extends Command {
 	}
 
 	private sendBotNotInVoiceChannelReply(interaction: Command.ChatInputCommandInteraction) {
-		return interaction.reply({
+		return interaction.editReply({
 			embeds: [
 				constructEmbed({
 					description: "The bot currently isn't in a voice channel."
@@ -35,7 +35,7 @@ export class SkipCommand extends Command {
 	}
 
 	private sendNotEnoughTracksToSkipReply(interaction: Command.ChatInputCommandInteraction) {
-		return interaction.reply({
+		return interaction.editReply({
 			embeds: [
 				constructEmbed({
 					description: "There aren't enough tracks in the queue to skip to."
