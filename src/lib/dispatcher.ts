@@ -19,6 +19,7 @@ export class FormulaDispatcher {
 	current: any | null;
 	stopped: boolean;
 	voiceChannel: VoiceBasedChannel;
+	interval: any;
 
 	// Constructor
 	public constructor({
@@ -87,7 +88,7 @@ export class FormulaDispatcher {
 			});
 
 		// If track is playing return, if bot isn't in VC return, and if there are users in the VC, return.
-		setInterval(async () => {
+		this.interval = setInterval(async () => {
 			if (this.current) return;
 			if (!this.guild.members.cache.get(this.client.user!.id)?.voice.channel) return;
 			if (this.voiceChannel.members.size > 1) return;
@@ -158,7 +159,8 @@ export class FormulaDispatcher {
 		);
 
 		this.queue = [];
-		// this.player.stopTrack();
+		this.player.destroy();
+		clearInterval(this.interval)
 		shoukaku.leaveVoiceChannel(this.player.guildId);
 		return queue.delete(this.guild.id);
 	}
