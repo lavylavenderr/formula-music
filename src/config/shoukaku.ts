@@ -146,8 +146,6 @@ class SpotifyPlayer extends Player {
 			playable.track = data.encoded;
 		}
 
-		console.log(playable.track);
-
 		if (!playable.track) playable.track = playable.track;
 		return super.playTrack(playable);
 	}
