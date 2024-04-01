@@ -44,9 +44,9 @@ export class FormulaDispatcher {
 		this.stopped = false;
 		this.voiceChannel = voiceChannel;
 
-		let _notifiedOnce = false;
 		let m: Message;
 		let description: string;
+		let _notifiedOnce = false;
 
 		this.player
 			.on('start', async () => {
@@ -73,8 +73,10 @@ export class FormulaDispatcher {
 			})
 			.on('end', async () => {
 				await m?.delete().catch(() => null);
+
 				if (this.repeat === 'one') this.queue.unshift(this.current);
 				if (this.repeat === 'all') this.queue.push(this.current);
+
 				this.play();
 			})
 			.on('closed', () => {})
@@ -83,6 +85,23 @@ export class FormulaDispatcher {
 				if (this.repeat === 'all') this.queue.push(this.current);
 				this.play();
 			});
+
+		// If track is playing return, if bot isn't in VC return, and if there are users in the VC, return.
+		setInterval(async () => {
+			if (this.current) return;
+			if (!this.guild.members.cache.get(this.client.user!.id)?.voice.channel) return;
+			if (this.voiceChannel.members.size > 1) return;
+
+			if (m) await m.delete().catch(() => null);
+			this.channel.send({
+				embeds: [
+					constructEmbed({
+						description: "There are no users in the voice channel, I'll now disconnect."
+					})
+				]
+			});
+			return this.destroy('Empty VC');
+		}, 10000);
 	}
 
 	get exists() {
@@ -138,7 +157,8 @@ export class FormulaDispatcher {
 			`Destroyed the player & connection @ guild "${this.guild.id}"\nReason: ${reason || 'No Reason Provided'}`
 		);
 
-		this.player.setPaused(true);
+		this.queue = [];
+		// this.player.stopTrack();
 		shoukaku.leaveVoiceChannel(this.player.guildId);
 		return queue.delete(this.guild.id);
 	}

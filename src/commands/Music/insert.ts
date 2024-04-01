@@ -3,6 +3,21 @@ import { Command } from '@sapphire/framework';
 import { constructEmbed } from '../../lib/embedbuilder';
 import { capitalizeFirstLetter, humanizeMs } from '../../lib/utils';
 
+interface ModifiedTrackData {
+	identifier: string;
+	isSeekable: boolean;
+	author: string;
+	length: number;
+	isStream: boolean;
+	requestedBy?: string;
+	position: number;
+	title: string;
+	uri?: string;
+	artworkUrl?: string;
+	isrc?: string;
+	sourceName: string;
+}
+
 @ApplyOptions<Command.Options>({
 	description: 'Insert a track to be played next.',
 	preconditions: ['GuildOnly', 'InVoiceChannel']
@@ -47,7 +62,8 @@ export class UserCommand extends Command {
 
 		switch (result.loadType) {
 			case 'search':
-				songInfo = result.data[0].info;
+				songInfo = result.data[0].info as ModifiedTrackData;
+				songInfo.requestedBy = interaction.user.id;
 				break;
 			case 'empty':
 				return this.sendErrorMessage(interaction, 'Sorry, we were unable to find any tracks with that query.');
@@ -56,11 +72,15 @@ export class UserCommand extends Command {
 				playlistInfo = result.playlistInfo;
 
 				result.data.tracks.forEach((track: any) => {
-					trackArray.push(track.info);
+					trackArray.push({
+						...track.info,
+						requestedBy: interaction.user.id
+					});
 				});
 				break;
 			case 'track':
-				songInfo = result.data.info;
+				songInfo = result.data.info as ModifiedTrackData;
+				songInfo.requestedBy = interaction.user.id;
 				break;
 			default:
 				return this.sendErrorMessage(interaction, 'Sorry, we were unable to find any tracks with that query.');
