@@ -83,21 +83,38 @@ class SpotifyPlayer extends Player {
 					}
 
 					return dispatcher.destroy('Lavalink Error');
+					// @ts-expect-error
+				} else if (soundCloudRes.data.length === 0) {
+					if (m) {
+						dispatcher.destroy('Lavalink Error');
+						m.edit({
+							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
+						});
+					} else {
+						dispatcher.destroy('Lavalink Error');
+						dispatcher.channel.send({
+							embeds: [constructEmbed({ description: 'There was an error attempting to play your requested track, please try again.' })]
+						});
+					}
+
+					return dispatcher.destroy('Lavalink Error');
 				}
 
 				if (m) await m.delete().catch(() => null);
-				const data = soundCloudRes.data as Track;
+				// @ts-expect-error
+				const data = soundCloudRes.data[0] as Track;
 				playable.track = data.encoded;
-				return;
 			}
 
 			if (!res?.data) {
 				return dispatcher.play();
 			}
 
-			data = res!.data as Track;
-			playable.track = data.encoded;
-			if (m) await m.delete().catch(() => null);
+			if (!playable.track) {
+				data = res!.data as Track;
+				playable.track = data.encoded;
+				if (m) await m.delete().catch(() => null);
+			}
 		}
 
 		// Soundcloud!
@@ -128,6 +145,8 @@ class SpotifyPlayer extends Player {
 			playable.metadata = data.info;
 			playable.track = data.encoded;
 		}
+
+		console.log(playable.track);
 
 		if (!playable.track) playable.track = playable.track;
 		return super.playTrack(playable);
