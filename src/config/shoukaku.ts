@@ -84,6 +84,11 @@ class SpotifyPlayer extends Player {
 
 					return dispatcher.destroy('Lavalink Error');
 				}
+
+				if (m) await m.delete().catch(() => null);
+				const data = soundCloudRes.data as Track;
+				playable.track = data.encoded;
+				return;
 			}
 
 			if (!res?.data) {
