@@ -123,8 +123,6 @@ export class RepeatCommand extends Subcommand {
 
 		dispatcher.repeatMode('one');
 
-		console.log(dispatcher);
-
 		return interaction.editReply({
 			embeds: [
 				constructEmbed({
