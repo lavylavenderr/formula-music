@@ -128,6 +128,10 @@ export class FormulaDispatcher {
 		this.player.stopTrack();
 	}
 
+	repeatMode(value: 'off' | 'all' | 'one') {
+		this.repeat = value;
+	}
+
 	play() {
 		if (!this.exists || !this.queue.length) {
 			this.current = null;
@@ -160,7 +164,7 @@ export class FormulaDispatcher {
 
 		this.queue = [];
 		this.player.destroy();
-		clearInterval(this.interval)
+		clearInterval(this.interval);
 		shoukaku.leaveVoiceChannel(this.player.guildId);
 		return queue.delete(this.guild.id);
 	}

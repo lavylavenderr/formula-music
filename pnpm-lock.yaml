@@ -35,6 +35,9 @@ dependencies:
   '@sapphire/plugin-scheduled-tasks':
     specifier: ^10.0.1
     version: 10.0.1
+  '@sapphire/plugin-subcommands':
+    specifier: ^6.0.3
+    version: 6.0.3
   '@sapphire/type':
     specifier: ^2.4.4
     version: 2.4.4
@@ -428,6 +431,14 @@ packages:
       tslib: 2.6.2
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /@sapphire/plugin-subcommands@6.0.3:
+    resolution: {integrity: sha512-SLDlTjMrMpb3s89ZjrBvVbMWsXfNNciO6SnNQdKLKTUQwktaYxIdj+k3MmEWpN19i8W9ogRvIrLl0Hw20pPUng==}
+    engines: {node: '>=v18', npm: '>=7'}
+    dependencies:
+      '@sapphire/utilities': 3.15.3
+      tslib: 2.6.2
     dev: false
 
   /@sapphire/prettier-config@2.0.0:

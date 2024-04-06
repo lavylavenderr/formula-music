@@ -24,7 +24,7 @@ export class QueueCommand extends Command {
 		if (!dispatcher)
 			return this.sendBotNotInVoiceChannelReply(interaction);
 
-		if (dispatcher.queue.length <= 1)
+		if (dispatcher.queue.length < 1)
 			return this.sendNoTracksInQueueReply(interaction);
 
 		const sortedGroups = splitIntoGroups(dispatcher.queue, 10);
