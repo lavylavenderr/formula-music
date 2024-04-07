@@ -216,7 +216,61 @@ class SpotifyRest extends Rest {
 								}))
 							}
 						};
+					case 'album':
+						const albumData = await spotifyApi.getAlbum(id);
+						const albumTracks = await spotifyApi.getAlbumTracks(id);
+						const albumArray = [];
 
+						if (albumData.statusCode == 404)
+							return {
+								loadType: 'error',
+								message: 'Album not found'
+							};
+
+						for (const result of albumTracks.body.items) {
+							if (!result) continue;
+							const trackData = await spotifyApi.getTrack(result.id);
+							albumArray.push(trackData.body);
+						}
+
+						while (albumArray.length !== albumTracks.body.total) {
+							const albumTracks = (await spotifyApi.getPlaylistTracks(id, {
+								offset: albumArray.length
+							})) as any;
+
+							for (const result of albumTracks.body.items) {
+								if (!result) continue;
+								const trackData = await spotifyApi.getTrack(result.id);
+								albumArray.push(trackData.body);
+							}
+						}
+
+						return {
+							loadType: 'playlist',
+							playlistInfo: {
+								selectedTrack: -1,
+								length: albumData.body.tracks.total,
+								name: albumData.body.name,
+								coverImg: albumData.body.images[0].url
+							},
+							data: {
+								tracks: albumArray.map((track) => ({
+									info: {
+										artworkUrl: albumData.body.images[0].url,
+										author: track.artists.map((artist: any) => artist.name).join(', '),
+										identifier: track.id,
+										isSeekable: false,
+										isStream: false,
+										isrc: track.external_ids.isrc,
+										length: track.duration_ms,
+										position: -1,
+										sourceName: 'spotify',
+										title: track.name,
+										uri: `https://open.spotify.com/track/${track.id}`
+									}
+								}))
+							}
+						};
 					case 'track':
 						const trackData = await spotifyApi.getTrack(id);
 
